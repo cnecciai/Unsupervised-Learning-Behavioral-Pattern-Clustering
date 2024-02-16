@@ -23,6 +23,7 @@ library(tidyverse)
 library(readxl)
 library(visdat)
 library(psych)
+library(factoextra) #For PCA
 library(PerformanceAnalytics)
 
 #Read in Travel Data
@@ -50,9 +51,9 @@ Travel_miss[Travel_miss != 0]
 vis_miss(Travel_Data) +
     coord_flip()
 
+#Drop For Now
 Travel_Data <- drop_na(Travel_Data)
-vis_miss(Travel_Data) +
-    coord_flip()
+
 
 #---Exploratory Data Analysis---
 
@@ -64,6 +65,9 @@ Travel_Data_Quant <- Travel_Data %>% select(-UserID) %>% as.data.frame()
 #Describe with Summary Statistics
 #UserID obviously useless here but useful for later
 Travel_Data_Quant %>% describe()
+
+#NOTE: INCREDIBLY WEAK CORRELATIONS ACROSS THE DATASET, WE MIGHT ACTUALLY
+#EXPECT PCA TO PERFORM POORLY
 
 #Correlation Matrix
 corrplot::corrplot(cor(Travel_Data_Quant),
@@ -89,7 +93,7 @@ Travel_PCA = prcomp(Travel_Data_Quant, scale. = TRUE)
 
     #Visualize explained variances per component
 fviz_eig(Travel_PCA, addlabels=TRUE)+
-    labs(x = "Dimensions(Pricipal Components")
+    labs(x = "Dimensions (Pricipal Components)")
     
 
 
@@ -106,5 +110,7 @@ Travel_PCA_and_Users = bind_cols(UserID = Travel_Data$UserID, Travel_PCA$x)
 
 
 #---K-Means Clustering---
+
+#--Hierarchical---
 
 #---Extra Visualizations---
