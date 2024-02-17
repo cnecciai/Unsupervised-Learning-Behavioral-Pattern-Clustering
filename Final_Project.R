@@ -23,11 +23,11 @@ library(tidyverse)
 library(readxl)
 library(visdat)
 library(psych)
-library(factoextra) #For PCA
+library(factoextra)
 library(PerformanceAnalytics)
 library(plotly)
 
-#Read in Travel Data - Change to CSV
+#Read in Travel Data - CHANGE TO CSV
 Travel_Data <- read_xlsx("Travel_Review.xlsx")
 
 #Initial  Inspection
@@ -57,8 +57,24 @@ Travel_Data <- drop_na(Travel_Data)
 
 #---Exploratory Data Analysis---
 
-#Remove ID for now during Analysis
-Travel_Data_Quant <- Travel_Data %>% select(-UserID) %>% as.data.frame() 
+#Note: User ratings of 0 could mean "not visited" or "no interest in submitting a review." It is up to the teams on how to treat, #interpret, or analyze them. There is no right or wrong way to deal with them, as long as you explain and justify your approach and #any assumptions you make and clarify them in the report.
+
+
+#---Function to Remove all Zero Values---
+remove_zeros <- function(x) {
+    x <- ifelse(x == 0, NA, x)
+    return(x)
+}
+
+#Replace with NA Values
+Travel_Data_Non_Zero <- Travel_Data %>%
+    mutate(across(where(is.numeric), remove_zeros)) 
+
+#Visualize Missing Values
+vis_miss(Travel_Data_Non_Zero, cluster = T)
+
+#Drop NA Values
+Travel_Data_Non_Zero <- Travel_Data_Non_Zero %>% drop_na()
 
 #Note: Knowing that K-Means & PCA can be sensitive to outliers, we're going 
 #to remove all outlier values from our full dataset and work with 2 datasets
@@ -74,39 +90,56 @@ remove_outliers <- function(x) {
     return(x)
 }
 
-Travel_Data_No_Outliers <- Travel_Data %>%
+Travel_Data_No_Outliers <- Travel_Data_Non_Zero %>%
     mutate(across(where(is.numeric), remove_outliers)) %>%
     drop_na()
 
-
-Travel_Data_No_Outliers_Quant <- Travel_Data_No_Outliers %>% select(-UserID)
 #Describe with Summary Statistics
 #UserID obviously useless here but useful for later
 
-Travel_Data_Quant %>% describe()
+Travel_Data_Full <- Travel_Data_Non_Zero %>% select(-UserID)
 
-Travel_Data_No_Outliers %>% describe()
+Travel_Data_Reduced <- Travel_Data_No_Outliers %>% select(-UserID)
 
+Travel_Data_Full %>% describe()
 
-#INCREDIBLY WEAK CORRELATIONS ACROSS FULL DATASET, WE MIGHT ACTUALLY
-#EXPECT PCA TO PERFORM POORLY ON FULL DATASET
+Travel_Data_Reduced %>% describe()
+
+#----
+#Currently we've removed all zeros (treating them as non-answers)
+#Have two datasets
+#1. --- Travel_Data_Full --- Full Dataset with outliers + zero answers removed
+#2. --- Travel_Data_Reduced ---  Outliers and zero answers removed
+#----
 
 #Correlation Matrix
-corrplot::corrplot(cor(Travel_Data_Quant),
+corrplot::corrplot(cor(Travel_Data_Full),
                    type = "lower", diag = F, 
                    tl.col = "black", tl.cex = .7,
                    tl.srt = 60)
 
 #Correlation Matrix - Stronger Correlation (PCA may Peform Better)
-corrplot::corrplot(cor(Travel_Data_No_Outliers_Quant),
+corrplot::corrplot(cor(Travel_Data_Reduced),
                    type = "lower", diag = F, 
                    tl.col = "black", tl.cex = .7,
                    tl.srt = 60)
 
 #Visualize Histograms of Variables
-names <- colnames(Travel_Data_Quant)
-for (i in 1:ncol(Travel_Data_Quant)) {
-    chart.Histogram(Travel_Data_Quant[,names[i]],
+names <- colnames(Travel_Data_Full)
+names
+for (i in 1:ncol(Travel_Data_Full)) {
+    chart.Histogram(Travel_Data_Full[,names[i]],
+                    xlab = names[i],
+                    main = paste("Distribution of", names[i]),
+                    border.col = "black"
+    )
+}
+
+
+#Visualize Histograms of Variables with Outliers Removed
+names <- colnames(Travel_Data_Reduced)
+for (i in 1:ncol(Travel_Data_Reduced)) {
+    chart.Histogram(Travel_Data_Reduced[,names[i]],
                     xlab = names[i],
                     main = paste("Distribution of", names[i]),
                     border.col = "black",
@@ -114,16 +147,10 @@ for (i in 1:ncol(Travel_Data_Quant)) {
     )
 }
 
-#Visualize Histograms of Variables with Outliers Removed
-names <- colnames(Travel_Data_Quant)
-for (i in 1:ncol(Travel_Data_Quant)) {
-    chart.Histogram(Travel_Data_Quant[,names[i]],
-                    xlab = names[i],
-                    main = paste("Distribution of", names[i]),
-                    border.col = "black",
-                    show.outliers = F
-    )
-}
+
+
+hist(Travel_Data_Quant$Churches)
+hist(Travel_Data_No_Outliers_Quant$Churches)
 
 #---Principal Components Analysis---
 
