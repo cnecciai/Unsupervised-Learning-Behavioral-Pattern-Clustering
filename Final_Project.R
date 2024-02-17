@@ -44,22 +44,32 @@ if ((nrow(duplicates)) == 0) {
     print("No duplicates detected")}
 
 
-#Show Variables w/ Percentage of Missing Values (Train Set)
+#Show Variables w/ Number of Missing Values (Train Set)
 print(paste("Percentage Missing Values for Dataset:"))
-Travel_miss <- sapply(Travel_Data, function(x){sum(is.na(x))/nrow(Travel_Data) * 100})
+Travel_miss <- sapply(Travel_Data, function(x){sum(is.na(x))})
 Travel_miss[Travel_miss != 0]
 
 #Visualize Missing Training Data
 vis_miss(Travel_Data) +
     coord_flip()
 
-#Drop For Now - Single Datapoint don't bother
-Travel_Data <- drop_na(Travel_Data)
+#---Missing Value Imputation---
+
+# Calculate median of "Gardens" column - Skewed Distribution
+median_gardens <- median(Travel_Data$Gardens, na.rm = TRUE)
+
+# Replace missing value with median
+Travel_Data$Gardens[is.na(Travel_Data$Gardens)] <- median_gardens
+
+# Verify the replacement
+missing_in_each_column <- colSums(is.na(Travel_Data))
+print(missing_in_each_column)
+#------------------------------------end replacing w median-----
 
 #---Exploratory Data Analysis---
 
-#Note: User ratings of 0 could mean "not visited" or "no interest in submitting a review." It is up to the teams on how to treat, #interpret, or analyze them. There is no right or wrong way to deal with them, as long as you explain and justify your approach and #any assumptions you make and clarify them in the report.
-
+# Taking Zero to mean no input/not interested, therefore skews data
+# towards a non-meaningful distribution... We're going to remove them 
 
 #---Function to Remove all Zero Values---
 remove_zeros <- function(x) {
@@ -174,6 +184,12 @@ fviz_eig(Travel_PCA_Outlierless, addlabels=TRUE)+
     labs(x = "Dimensions (Pricipal Components)",
          title = "Scree-Plot for Dataset without Outliers")
     
+#MABEL-INSERT REASONING FOR REDUCTION HERE - Retain 90% of the Variance
+get_eig(Travel_PCA)
+ReducedPCA <- Travel_PCA$x[,1:18]
+
+get_eig(Travel_PCA_Outlierless)
+ReducedPCA_Outlierless <- Travel_PCA_Outlierless$x[,1:14]
 
 fviz_pca_var(Travel_PCA,  col.var = "contrib",
              gradient.cols = c("red", "darkgreen"),
@@ -199,19 +215,96 @@ Travel_PCA_Outlierless$x %>% data.frame() %>% ggplot(aes(PC1, PC2)) +
 #Show 3d dimensional plot of the full Travel Data
 #Hard to make out any spheres but there are some apparent
 #clusters, but mostly it appears as one big glob
-fig = plot_ly(as.data.frame(Travel_PCA$x),
-              x=~PC1,y=~PC2,z=~PC3, size = 1.3)
-fig = fig %>% add_markers()
-fig
+plot_ly(as.data.frame(Travel_PCA$x),
+        x=~PC1,y=~PC2,z=~PC3, size = 1.3) %>%
+    add_markers()
 
 #Removing the outliers from the full dataset actually 
 #seems to slim down the shape from the previous 3d plot
-fig = plot_ly(as.data.frame(Travel_PCA_Outlierless$x),
-              x=~PC1,y=~PC2,z=~PC3, size = 1.3)
-fig = fig %>% add_markers()
-fig
+plot_ly(as.data.frame(Travel_PCA_Outlierless$x),
+        x=~PC1,y=~PC2,z=~PC3, size = 1.3) %>%
+    add_markers()
+
 
 #---K-Means Clustering---
+
+#####Finding the optimal number of clusters:
+
+#Three methods: Elbow, Silhouette, and Gap statistics
+
+#Elbow method - with maximum 5 clusters
+fviz_nbclust(ReducedPCA, kmeans, k.max=5, nstart=30, method="wss")
+fviz_nbclust(ReducedPCA_Outlierless, kmeans, k.max=5, nstart=30, method="wss")
+
+#Silhouette method - maximum 5 clusters
+fviz_nbclust(ReducedPCA, kmeans, k.max=5, nstart=30, method="silhouette")
+fviz_nbclust(ReducedPCA_Outlierless, kmeans, k.max=5, nstart=30, method="silhouette")
+
+#Compute gap statistics - maximum 5 clusters and 30 bootstrap samples
+set.seed(2023)
+fviz_nbclust(ReducedPCA, kmeans, k.max=5, nstart=30, method="gap_stat", nboot=30)
+fviz_nbclust(ReducedPCA_Outlierless, kmeans, k.max=5, nstart=30, method="gap_stat", nboot=30)
+
+#Verify Using NbClust for K-means --> Showing 3 as the best number of clusters
+nb_clust_full <- NbClust(ReducedPCA, distance = "euclidean", min.nc = 2, 
+                         max.nc = 5, method = "kmeans")
+
+#Overwhelmingly showing 17 supporting 3 as the optimal number of clusters
+nb_clust_reduced <- NbClust(ReducedPCA_Outlierless, distance = "euclidean", min.nc = 2,
+                            max.nc = 5, method = "kmeans")
+
+
+#Rerun K-means with Optimal K = 3 on Full Dataset
+
+set.seed(2024)
+k3_full = kmeans(ReducedPCA, centers=3, nstart=30)
+
+#--- Full Dataset Plots ---
+
+#2d Plot of Clusters
+ReducedPCA %>% data.frame() %>%
+    ggplot(aes(PC1, PC2, color = factor(k3_full$cluster))) +
+    geom_point() +
+    labs(title = "Full Dataset K-Means Optimal Cluster Size: 3") +
+    scale_color_manual("Cluster", values = c("red", "orange", "grey")) +
+    theme_bw()
+
+#3d Plot of cluster
+plot_ly(as.data.frame(ReducedPCA),
+        x=~PC1,y=~PC2,z=~PC3, color = k3_full$cluster,
+        colors = "Set1",
+        size = 3) %>%
+    add_markers()
+
+#--- Reduced Dataset Plots ---
+
+set.seed(2024)
+k3_full_outlierless = kmeans(ReducedPCA_Outlierless, centers=3, nstart=30)
+
+#2d Plot of Clusters
+ReducedPCA_Outlierless %>% data.frame() %>%
+    ggplot(aes(PC1, PC2, color = factor(k3_full_outlierless$cluster))) +
+    geom_point() +
+    labs(title = "Reduced Dataset K-Means Optimal Cluster Size: 3") +
+    scale_color_manual("Cluster", values = c("red", "orange", "grey")) +
+    theme_bw()
+
+#3d Plot of cluster
+plot_ly(as.data.frame(ReducedPCA_Outlierless),
+        x=~PC1,y=~PC2,z=~PC3, color = k3_full_outlierless$cluster,
+        colors = "Set1",
+        size = 3) %>%
+    add_markers()
+
+
+#Visualize the silhouettes for full and reduced dataset
+sile_full = silhouette(k3_full$cluster, dist(ReducedPCA))
+fviz_silhouette(sile_full)
+
+#Visualize the silhouettes based on 5 kmeans clusters
+sile_full_outlierless = silhouette(k3_full_outlierless$cluster, dist(ReducedPCA_Outlierless))
+fviz_silhouette(sile_full_outlierless)
+
 
 #--Hierarchical---
 
