@@ -15,6 +15,11 @@
         #Principal Components Analysis
         #K-Means Clustering
 #-----------------------------------
+#NOTE:
+
+#It may be the case that the full dataset might be performing so well would be because these reviews given shouldn't be looked
+#at as mainly outliers to simply be rid of. Maybe if there were minimal amounts, but these reviews are still valid. They aren't
+#invalid and so we shouldn't just arbitrarily throw them away. 
 
 #---Data Pre-Processing---
 
@@ -29,8 +34,8 @@ library(plotly)
 library(corrplot)
 
 #Read in Travel Data - CHANGE TO CSV
-Travel_Data <- read_xlsx("Travel_Review.xlsx")
-
+#Travel_Data <- read_xlsx("Travel_Review.xlsx")
+Travel_Data <- read_csv("Travel_Review.csv")
 #Initial  Inspection
 Travel_Data %>% glimpse()
 
@@ -64,6 +69,8 @@ Travel_Data$Gardens[is.na(Travel_Data$Gardens)] <- median_gardens
 # Verify the replacement
 missing_in_each_column <- colSums(is.na(Travel_Data))
 print(missing_in_each_column)
+
+hist(Travel_Data$Monuments)
 #------------------------------------end replacing w median-----
 
 #---Exploratory Data Analysis---
@@ -82,10 +89,16 @@ Travel_Data_Non_Zero <- Travel_Data %>%
     mutate(across(where(is.numeric), remove_zeros)) 
 
 #Visualize Missing Values
-vis_miss(Travel_Data_Non_Zero, cluster = T)
+vis_miss(Travel_Data_Non_Zero, cluster = T) + coord_flip()
 
-#Drop NA Values
-Travel_Data_Non_Zero <- Travel_Data_Non_Zero %>% drop_na()
+replace_zeros <- function(var) {
+    median_value = median(var, na.rm = T)
+    newvar = replace_na(var, median_value)
+    return(newvar)
+}
+
+Travel_Data_Zero_Impute <- Travel_Data_Non_Zero %>%
+    mutate_all(funs(ifelse(is.na(.), median(., na.rm = TRUE), .)))
 
 #Note: Knowing that K-Means & PCA can be sensitive to outliers, we're going 
 #to remove all outlier values from our full dataset and work with 2 datasets
@@ -95,32 +108,30 @@ Travel_Data_Non_Zero <- Travel_Data_Non_Zero %>% drop_na()
 remove_outliers <- function(x) {
     qnt <- quantile(x, probs=c(0.25, 0.75))
     iqr <- IQR(x)
-    lower <- qnt[1] - 1.5 * iqr
-    upper <- qnt[2] + 1.5 * iqr
+    lower <- qnt[1] - (1.5 * iqr)
+    upper <- qnt[2] + (1.5 * iqr)
     x <- ifelse(x < lower | x > upper, NA, x)
     return(x)
 }
 
-Travel_Data_No_Outliers <- Travel_Data_Non_Zero %>%
+Travel_Data_No_Outliers <- Travel_Data_Zero_Impute %>%
     mutate(across(where(is.numeric), remove_outliers)) %>%
     drop_na()
 
 #Describe with Summary Statistics
 #UserID obviously useless here but useful for later
 
-Travel_Data_Full <- Travel_Data_Non_Zero %>% select(-UserID) %>% data.frame()
-
+Travel_Data_Full <- Travel_Data_Zero_Impute %>% select(-UserID) %>% data.frame()
 Travel_Data_Reduced <- Travel_Data_No_Outliers %>% select(-UserID) %>% data.frame()
 
 Travel_Data_Full %>% describe()
-
 Travel_Data_Reduced %>% describe()
 
 #----
-#Currently we've removed all zeros (treating them as non-answers)
+#Currently we've imputed all zeros
 #Have two datasets
-#1. --- Travel_Data_Full --- Full Dataset with outliers + zero answers removed
-#2. --- Travel_Data_Reduced ---  Outliers and zero answers removed
+#1. --- Travel_Data_Full --- Full Dataset with outliers + zero answers imputed
+#2. --- Travel_Data_Reduced ---  Outliers and zero answers imputed
 #----
 
 #Correlation Matrix
@@ -184,12 +195,12 @@ fviz_eig(Travel_PCA_Outlierless, addlabels=TRUE)+
     labs(x = "Dimensions (Pricipal Components)",
          title = "Scree-Plot for Dataset without Outliers")
     
-#MABEL-INSERT REASONING FOR REDUCTION HERE - Retain 90% of the Variance
+#MABEL-INSERT REASONING FOR REDUCTION HERE - Retain 80% of the Variance
 get_eig(Travel_PCA)
-ReducedPCA <- Travel_PCA$x[,1:18]
+ReducedPCA <- Travel_PCA$x[,1:13]
 
 get_eig(Travel_PCA_Outlierless)
-ReducedPCA_Outlierless <- Travel_PCA_Outlierless$x[,1:14]
+ReducedPCA_Outlierless <- Travel_PCA_Outlierless$x[,1:11]
 
 fviz_pca_var(Travel_PCA,  col.var = "contrib",
              gradient.cols = c("red", "darkgreen"),
@@ -228,33 +239,31 @@ plot_ly(as.data.frame(Travel_PCA_Outlierless$x),
 
 #---K-Means Clustering---
 
-#####Finding the optimal number of clusters:
-
 #Three methods: Elbow, Silhouette, and Gap statistics
 
 #Elbow method - with maximum 5 clusters
-fviz_nbclust(ReducedPCA, kmeans, k.max=5, nstart=30, method="wss")
-fviz_nbclust(ReducedPCA_Outlierless, kmeans, k.max=5, nstart=30, method="wss")
+fviz_nbclust(ReducedPCA, kmeans, k.max=6, nstart=30, method="wss")
+fviz_nbclust(ReducedPCA_Outlierless, kmeans, k.max=6, nstart=30, method="wss")
 
 #Silhouette method - maximum 5 clusters
-fviz_nbclust(ReducedPCA, kmeans, k.max=5, nstart=30, method="silhouette")
-fviz_nbclust(ReducedPCA_Outlierless, kmeans, k.max=5, nstart=30, method="silhouette")
+fviz_nbclust(ReducedPCA, kmeans, k.max=6, nstart=30, method="silhouette")
+fviz_nbclust(ReducedPCA_Outlierless, kmeans, k.max=6, nstart=30, method="silhouette")
 
 #Compute gap statistics - maximum 5 clusters and 30 bootstrap samples
 set.seed(2023)
-fviz_nbclust(ReducedPCA, kmeans, k.max=5, nstart=30, method="gap_stat", nboot=30)
-fviz_nbclust(ReducedPCA_Outlierless, kmeans, k.max=5, nstart=30, method="gap_stat", nboot=30)
+fviz_nbclust(ReducedPCA, kmeans, k.max=6, nstart=30, method="gap_stat", nboot=30)
+fviz_nbclust(ReducedPCA_Outlierless, kmeans, k.max=6, nstart=30, method="gap_stat", nboot=30)
 
 #Verify Using NbClust for K-means --> Showing 3 as the best number of clusters
 nb_clust_full <- NbClust(ReducedPCA, distance = "euclidean", min.nc = 2, 
-                         max.nc = 5, method = "kmeans")
+                         max.nc = 6, method = "kmeans")
 
 #Overwhelmingly showing 17 supporting 3 as the optimal number of clusters
 nb_clust_reduced <- NbClust(ReducedPCA_Outlierless, distance = "euclidean", min.nc = 2,
-                            max.nc = 5, method = "kmeans")
+                            max.nc = 6, method = "kmeans")
 
 
-#Rerun K-means with Optimal K = 3 on Full Dataset
+#Rerun K-means with Optimal K = 3 on Full Dataset K = 5 on Reduced
 
 set.seed(2024)
 k3_full = kmeans(ReducedPCA, centers=3, nstart=30)
@@ -273,27 +282,27 @@ ReducedPCA %>% data.frame() %>%
 plot_ly(as.data.frame(ReducedPCA),
         x=~PC1,y=~PC2,z=~PC3, color = k3_full$cluster,
         colors = "Set1",
-        size = 3) %>%
+        size = 4) %>%
     add_markers()
 
 #--- Reduced Dataset Plots ---
 
 set.seed(2024)
-k3_full_outlierless = kmeans(ReducedPCA_Outlierless, centers=3, nstart=30)
+k3_full_outlierless = kmeans(ReducedPCA_Outlierless, centers=5, nstart=30)
 
 #2d Plot of Clusters
 ReducedPCA_Outlierless %>% data.frame() %>%
     ggplot(aes(PC1, PC2, color = factor(k3_full_outlierless$cluster))) +
     geom_point() +
-    labs(title = "Reduced Dataset K-Means Optimal Cluster Size: 3") +
-    scale_color_manual("Cluster", values = c("red", "orange", "grey")) +
+    labs(title = "Reduced Dataset K-Means Optimal Cluster Size: 5") +
+    scale_color_manual("Cluster", values = c("red", "green", "orange", "brown", "grey")) +
     theme_bw()
 
 #3d Plot of cluster
 plot_ly(as.data.frame(ReducedPCA_Outlierless),
         x=~PC1,y=~PC2,z=~PC3, color = k3_full_outlierless$cluster,
         colors = "Set1",
-        size = 3) %>%
+        size = 6) %>%
     add_markers()
 
 
@@ -306,7 +315,10 @@ sile_full_outlierless = silhouette(k3_full_outlierless$cluster, dist(ReducedPCA_
 fviz_silhouette(sile_full_outlierless)
 
 
+#Based on everything I've seen so far, I'm inclined to believe that the full dataset with the "supposed"
+#outliers might actually be the preferred approach. There is an overwhelming consensus that the optimal
+#number of clusters is three. 
+
 #--Hierarchical---
 
-#---Extra Visualizations---
 
