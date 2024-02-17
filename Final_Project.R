@@ -26,6 +26,7 @@ library(psych)
 library(factoextra)
 library(PerformanceAnalytics)
 library(plotly)
+library(corrplot)
 
 #Read in Travel Data - CHANGE TO CSV
 Travel_Data <- read_xlsx("Travel_Review.xlsx")
@@ -97,9 +98,9 @@ Travel_Data_No_Outliers <- Travel_Data_Non_Zero %>%
 #Describe with Summary Statistics
 #UserID obviously useless here but useful for later
 
-Travel_Data_Full <- Travel_Data_Non_Zero %>% select(-UserID)
+Travel_Data_Full <- Travel_Data_Non_Zero %>% select(-UserID) %>% data.frame()
 
-Travel_Data_Reduced <- Travel_Data_No_Outliers %>% select(-UserID)
+Travel_Data_Reduced <- Travel_Data_No_Outliers %>% select(-UserID) %>% data.frame()
 
 Travel_Data_Full %>% describe()
 
@@ -118,7 +119,7 @@ corrplot::corrplot(cor(Travel_Data_Full),
                    tl.col = "black", tl.cex = .7,
                    tl.srt = 60)
 
-#Correlation Matrix - Stronger Correlation (PCA may Peform Better)
+#Correlation Matrix - Stronger Correlation (PCA may Perform Better)
 corrplot::corrplot(cor(Travel_Data_Reduced),
                    type = "lower", diag = F, 
                    tl.col = "black", tl.cex = .7,
@@ -126,40 +127,34 @@ corrplot::corrplot(cor(Travel_Data_Reduced),
 
 #Visualize Histograms of Variables
 names <- colnames(Travel_Data_Full)
-names
 for (i in 1:ncol(Travel_Data_Full)) {
     chart.Histogram(Travel_Data_Full[,names[i]],
                     xlab = names[i],
-                    main = paste("Distribution of", names[i]),
+                    main = paste("Full Dataset - Distribution of", names[i]),
+                    border.col = "black"
+    )
+    
+    chart.Histogram(Travel_Data_Reduced[,names[i]],
+                    xlab = names[i],
+                    main = paste("Reduced Dataset - Distribution of", names[i]),
                     border.col = "black"
     )
 }
 
-
-#Visualize Histograms of Variables with Outliers Removed
-names <- colnames(Travel_Data_Reduced)
-for (i in 1:ncol(Travel_Data_Reduced)) {
-    chart.Histogram(Travel_Data_Reduced[,names[i]],
-                    xlab = names[i],
-                    main = paste("Distribution of", names[i]),
-                    border.col = "black",
-                    show.outliers = F
-    )
-}
-
-
-
-hist(Travel_Data_Quant$Churches)
-hist(Travel_Data_No_Outliers_Quant$Churches)
-
 #---Principal Components Analysis---
 
 #Extract Principal Components Through SVD
-Travel_PCA = prcomp(Travel_Data_Quant, scale. = TRUE)
+Travel_PCA = prcomp(Travel_Data_Full, scale. = TRUE)
 
 #Extract Principal Components Through SVD
-Travel_PCA_Outlierless = prcomp(Travel_Data_No_Outliers_Quant, scale. = TRUE)
+Travel_PCA_Outlierless = prcomp(Travel_Data_Reduced, scale. = TRUE)
 
+#Show how the Variables are related to the Principal Components
+pca_var <- get_pca_var(Travel_PCA)
+pca_outlierless_var <- get_pca_var(Travel_PCA_Outlierless)
+
+corrplot(pca_var$contrib, is.corr = F, tl.col = "black",)
+corrplot(pca_outlierless_var$contrib, is.corr = F, tl.col = "black",)
 
 #Variable Contributions to Principal Components
 fviz_contrib(Travel_PCA, choice = "var", axes = 1) # Contributions of variables to PC1
@@ -167,9 +162,6 @@ fviz_contrib(Travel_PCA_Outlierless, choice = "var", axes = 1) # Contributions o
 
 fviz_contrib(Travel_PCA, choice = "var", axes = 2) # Contributions of variables to PC2
 fviz_contrib(Travel_PCA_Outlierless, choice = "var", axes = 2) # Contributions of variables to PC2
-
-fviz_contrib(Travel_PCA, choice = "var", axes = 3) # Contributions of variables to PC3
-fviz_contrib(Travel_PCA_Outlierless, choice = "var", axes = 3) # Contributions of variables to PC3
 
 
 #Visualize explained variances per component
@@ -195,18 +187,27 @@ fviz_pca_var(Travel_PCA_Outlierless,  col.var = "contrib",
              title = "Variables - PCA Outliers Removed")
 
 
+#Try two-dimensional plots of principal components
+Travel_PCA$x %>% data.frame() %>% ggplot(aes(PC1, PC2)) +
+    geom_point()
+
+
+Travel_PCA_Outlierless$x %>% data.frame() %>% ggplot(aes(PC1, PC2)) +
+    geom_point()
+
+
 #Show 3d dimensional plot of the full Travel Data
 #Hard to make out any spheres but there are some apparent
 #clusters, but mostly it appears as one big glob
 fig = plot_ly(as.data.frame(Travel_PCA$x),
-              x=~PC1,y=~PC2,z=~PC3, size = 1)
+              x=~PC1,y=~PC2,z=~PC3, size = 1.3)
 fig = fig %>% add_markers()
 fig
 
 #Removing the outliers from the full dataset actually 
 #seems to slim down the shape from the previous 3d plot
 fig = plot_ly(as.data.frame(Travel_PCA_Outlierless$x),
-              x=~PC1,y=~PC2,z=~PC3, size = 1)
+              x=~PC1,y=~PC2,z=~PC3, size = 1.3)
 fig = fig %>% add_markers()
 fig
 
