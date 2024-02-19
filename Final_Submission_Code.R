@@ -137,13 +137,13 @@ fviz_pca_var(Travel_PCA,  col.var = "contrib",
 #---K-Means Clustering---
 #------------------------
 
-#Elbow method - with maximum 5 clusters
+#Elbow method
 fviz_nbclust(Reduced_Dimensional_Data, kmeans, k.max=5, nstart=30, method="wss")
 
-#Silhouette method - maximum 5 clusters
+#Silhouette
 fviz_nbclust(Reduced_Dimensional_Data, kmeans, k.max=5, nstart=30, method="silhouette")
 
-#Compute gap statistics - maximum 5 clusters and 30 bootstrap samples
+#Compute GAP
 set.seed(2023)
 fviz_nbclust(Reduced_Dimensional_Data, kmeans, k.max=5, nstart=30, method="gap_stat", nboot=30)
 
@@ -182,11 +182,13 @@ fviz_silhouette(sile_full)
 #---Exploratory Data Analysis/Pattern Discussion/Recommendations---
 #------------------------------------------------------------------
 
-
+#-------------------------------
 #Map our cluster labels back to the original dataset to understand the difference in variable
 #distributions. This will guide us in building our recommendations by considering which Target_Group
 #tends to rate particular locations/attractions as being the highest. A Target_Group that have has a 
 #particularly high rating for any given variable might be a target for a marketing campaign.
+#-------------------------------
+
 Travel_with_Cluster_Labels <- cbind(Target_Group = factor(K_Means_Model$cluster), Travel_Data_Zero_Impute)
 
 summary_stats <- Travel_with_Cluster_Labels %>%
@@ -216,15 +218,15 @@ Target_Campain_Guide <- data.frame(
     "Location_or_Attraction" = str_remove(Location_Attraction, "_median")
 )
 
+#-------------------------------
 #Using our `Target_Campaign_Guide` sorted by our Target Groups and 
 #Their High Median Ratings of Particular Locations/Attractions, we 
 #Can utilize the Results of our PCA and K-Means Clustering to target
-#Certain Groups of People who might find interest in other similiar 
+#Certain Groups of People who might find interest in other similar.
 #locations/attractions rated highly by other tourists in their Target Group
-
-
 #Might want to look at the top 3/4 for each of the groups since the 
 #locations/attractions may be related...
+#-------------------------------
 
 Target_Campain_Guide %>%
 arrange(Target_Group, desc(High_Median_Rating))
