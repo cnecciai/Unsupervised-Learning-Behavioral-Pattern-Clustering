@@ -1,2 +1,0 @@
-Knowing that PCA/K-means clustering could be sensitive to outliers, we're going to work with two dataesets.
-One of the datasets will be the full dataset, and the other will have all outliers removed. 
