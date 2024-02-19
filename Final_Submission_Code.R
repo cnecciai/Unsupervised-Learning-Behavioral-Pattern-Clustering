@@ -196,6 +196,7 @@ summary_stats <- Travel_with_Cluster_Labels %>%
     summarise(across(where(is.numeric), 
                      list( median = median)))
 
+
 #Retrieve Statistics Relating to How Groups Rated Certain Attractions/Locations
 Highest_Median_Rating <- c()
 Target_Group <- c()
@@ -212,12 +213,13 @@ for (i in 2:ncol(summary_stats)) {
     }
 }
 
-Target_Campain_Guide <- data.frame(
+Target_Campaign_Guide <- data.frame(
     "Target_Group" = Target_Group,
     "High_Median_Rating" = as.numeric(Highest_Median_Rating),
     "Location_or_Attraction" = str_remove(Location_Attraction, "_median")
 )
 
+Target_Campaign_Guide
 #-------------------------------
 #Using our `Target_Campaign_Guide` sorted by our Target Groups and 
 #Their High Median Ratings of Particular Locations/Attractions, we 
@@ -228,7 +230,7 @@ Target_Campain_Guide <- data.frame(
 #locations/attractions may be related...
 #-------------------------------
 
-Target_Campain_Guide %>%
+Target_Campaign_Guide %>%
 arrange(Target_Group, desc(High_Median_Rating))
 
 #Inspect Variable of Choice
