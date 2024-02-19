@@ -136,7 +136,7 @@ fviz_pca_var(Travel_PCA,  col.var = "contrib",
 #------------------------
 #---K-Means Clustering---
 #------------------------
-?fviz_nbclust
+
 #Elbow method - with maximum 5 clusters
 fviz_nbclust(Reduced_Dimensional_Data, kmeans, k.max=5, nstart=30, method="wss")
 
