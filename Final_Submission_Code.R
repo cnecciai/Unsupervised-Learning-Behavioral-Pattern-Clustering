@@ -1,13 +1,13 @@
-#-----------------------------------
-#title: "Unsupervised Learning Final Project"
-#subtitle: 'PCA and Clustering'
-# authors: "Saxa Target_Group #9"
-#   Kassandra Sellers
-#   Mabel Lorena Barba
-#   Benny Huang
-#   Tony Campoverde
-#   Clark Necciai
-#-----------------------------------
+#------------------------------------------------
+#| title: "Unsupervised Learning Final Project" |
+#| subtitle: 'PCA and Clustering'               | 
+#|  authors: "Saxa Target_Group #9"             | 
+#|    Kassandra Sellers                         | 
+#|    Mabel Lorena Barba                        | 
+#|    Benny Huang                               | 
+#|    Tony Campoverde                           | 
+#|    Clark Necciai                             | 
+#------------------------------------------------
 
 #-------------------------
 #---Data Pre-processing---
@@ -54,6 +54,7 @@ miss[miss != 0]
 
 #---Replace Zero Values With NA---
 zero_to_na <- function(x) {
+    
     x <- ifelse(x == 0, NA, x)
     return(x)
 }
@@ -163,14 +164,14 @@ Reduced_Dimensional_Data %>% data.frame() %>%
     ggplot(aes(PC1, PC2, color = factor(K_Means_Model$cluster))) +
     geom_point() +
     labs(title = "K-Means Optimal Cluster Size: 3") +
-    scale_color_manual("Cluster", values = c("red", "orange", "grey")) +
+    scale_color_manual("Cluster", values = c("darkred", "orange", "grey")) +
     theme_bw()
 
 #3d Plot of cluster
 plot_ly(as.data.frame(Reduced_Dimensional_Data),
         x=~PC1,y=~PC2,z=~PC3, color = K_Means_Model$cluster,
         name = "Hello",
-        colors = "Set1",
+        colors = c("darkred", "orange", "grey"),
         size = 4) %>%
     add_markers()
 
@@ -183,10 +184,12 @@ fviz_silhouette(sile_full)
 #------------------------------------------------------------------
 
 #-------------------------------
-#Map our cluster labels back to the original dataset to understand the difference in variable
-#distributions. This will guide us in building our recommendations by considering which Target_Group
-#tends to rate particular locations/attractions as being the highest. A Target_Group that have has a 
-#particularly high rating for any given variable might be a target for a marketing campaign.
+#Map our cluster labels back to the original dataset to understand the
+#difference in variable distributions. This will guide us in building our
+#recommendations by considering which Target_Group tends to rate particular
+#locations/attractions as being the highest. A Target_Group that have has a
+#particularly high rating for any given variable might be a target for a
+#marketing campaign.
 #-------------------------------
 
 Travel_with_Cluster_Labels <- cbind(Target_Group = factor(K_Means_Model$cluster), Travel_Data_Zero_Impute)
@@ -213,29 +216,40 @@ for (i in 2:ncol(summary_stats)) {
     }
 }
 
+
+
+#-------------------------------
+#Using our `Target_Campaign_Guide` sorted by our Target Groups and Their High
+#Median Ratings of Particular Locations/Attractions, we Can utilize the Results
+#of our PCA and K-Means Clustering to target Certain Groups of People who might
+#find interest in other similar. locations/attractions rated highly by other
+#tourists in their Target Group Might want to look at the top 3/4 for each of
+#the groups since the locations/attractions may be related.
+#-------------------------------
+
 Target_Campaign_Guide <- data.frame(
-    "Target_Group" = Target_Group,
+    "Target_Group" = factor(Target_Group),
     "High_Median_Rating" = as.numeric(Highest_Median_Rating),
     "Location_or_Attraction" = str_remove(Location_Attraction, "_median")
 )
 
-Target_Campaign_Guide
-#-------------------------------
-#Using our `Target_Campaign_Guide` sorted by our Target Groups and 
-#Their High Median Ratings of Particular Locations/Attractions, we 
-#Can utilize the Results of our PCA and K-Means Clustering to target
-#Certain Groups of People who might find interest in other similar.
-#locations/attractions rated highly by other tourists in their Target Group
-#Might want to look at the top 3/4 for each of the groups since the 
-#locations/attractions may be related...
-#-------------------------------
-
+#Show Statistics of Group Preferences of Destinations/Attractions
 Target_Campaign_Guide %>%
-arrange(Target_Group, desc(High_Median_Rating))
+    arrange(Target_Group,
+            desc(High_Median_Rating))
 
-#Inspect Variable of Choice
-Travel_with_Cluster_Labels %>% 
-    ggplot(aes(Malls, fill = Target_Group)) +
-    geom_density(aes(alpha = 0.3)) +
-    labs(title = "Distribution of Target_Group Median Ratings") +
-    theme_gray()
+
+#Visualize
+Target_Campaign_Guide %>% 
+    ggplot(aes(x = fct_reorder(Location_or_Attraction, High_Median_Rating),
+               High_Median_Rating, fill = Target_Group)) +
+    geom_col() + 
+    facet_wrap(~Target_Group, nrow = 3, ncol = 1, scales = "free_y") +
+    coord_flip() +
+    theme_minimal() +
+    labs(title = "Destination/Attraction Analysis: Group Ratings and Preferred Destinations", 
+         x = "Tourist Destination",
+         y = "Rating of Destination/Attraction") +
+    theme(legend.position = "bottom") +
+    scale_fill_manual("Cluster", values = c("darkred", "orange", "grey")) +
+    theme(strip.text = element_blank()) 
