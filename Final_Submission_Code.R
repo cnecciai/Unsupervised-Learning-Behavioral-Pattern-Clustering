@@ -124,9 +124,9 @@ fviz_eig(Travel_PCA, addlabels=TRUE)+
     labs(x = "Dimensions (Pricipal Components)",
          title = "Scree-Plot for Full Dataset")
     
-#Retain Determined Percentage of Data (90%)
+#Retain Determined Percentage of Data (75%)
 get_eig(Travel_PCA)
-Reduced_Dimensional_Data <- Travel_PCA$x[,1:5]
+Reduced_Dimensional_Data <- Travel_PCA$x[,1:11]
 
 fviz_pca_var(Travel_PCA,  col.var = "contrib",
              gradient.cols = c("red", "darkgreen"),
@@ -146,7 +146,7 @@ fviz_nbclust(Reduced_Dimensional_Data, kmeans, k.max=5, nstart=30, method="silho
 
 #Compute GAP
 set.seed(2023)
-fviz_nbclust(Reduced_Dimensional_Data, kmeans, k.max=5, nstart=30, method="gap_stat", nboot=30)
+fviz_nbclust(Reduced_Dimensional_Data, kmeans, k.max=5, nstart=30, method="gap_stat", nboot=20)
 
 #Verify Using NbClust for K-means --> Showing 3 as the best number of clusters
 NbClust(Reduced_Dimensional_Data, distance = "euclidean", min.nc = 2, 
@@ -247,7 +247,7 @@ Target_Campaign_Guide %>%
     facet_wrap(~Target_Group, nrow = 3, ncol = 1, scales = "free_y") +
     coord_flip() +
     theme_minimal() +
-    labs(title = "Destination/Attraction Analysis: Group Ratings and Preferred Destinations", 
+    labs(title = "Group Rating of Preferred Destinations/Attractions", 
          x = "Tourist Destination",
          y = "Rating of Destination/Attraction") +
     theme(legend.position = "bottom") +
