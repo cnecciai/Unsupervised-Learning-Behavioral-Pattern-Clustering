@@ -1,7 +1,7 @@
 #------------------------------------------------
 #| title: "Unsupervised Learning Final Project" |
 #| subtitle: 'PCA and Clustering'               | 
-#|  authors: "Saxa Target_Group #9"             | 
+#|  authors: "Saxa Group #9"                    | 
 #|    Kassandra Sellers                         | 
 #|    Mabel Lorena Barba                        | 
 #|    Benny Huang                               | 
@@ -54,7 +54,6 @@ miss[miss != 0]
 
 #---Replace Zero Values With NA---
 zero_to_na <- function(x) {
-    
     x <- ifelse(x == 0, NA, x)
     return(x)
 }
@@ -108,10 +107,14 @@ Travel_PCA = prcomp(Travel_Data, scale. = TRUE)
 #Show how the Variables are related to the Principal Components
 pca_full_var <- get_pca_var(Travel_PCA)
 
-corrplot(pca_full_var$contrib, is.corr = F, tl.col = "black",)
+#Variable Correlations 
+pca_full_var$coord
+
+#Variable Contributions
+corrplot(pca_full_var$contrib, is.corr = F, tl.col = "black")
 
 
-#Variable Contributions to Principal Components
+#Weak Variable Contributions to Principal Components
 fviz_contrib(Travel_PCA, choice = "var", axes = 1) # Contributions of variables to PC1
 
 fviz_contrib(Travel_PCA, choice = "var", axes = 2) # Contributions of variables to PC2
@@ -120,18 +123,26 @@ fviz_contrib(Travel_PCA, choice = "var", axes = 3) # Contributions of variables 
 
 
 #Visualize explained variances per component
-fviz_eig(Travel_PCA, addlabels=TRUE)+
+fviz_eig(Travel_PCA, addlabels=TRUE, ncp = 24)+
     labs(x = "Dimensions (Pricipal Components)",
-         title = "Scree-Plot for Full Dataset")
+         y = "Percentage of Explained Variances",
+         title = "Scree-Plot",
+         subtitle = "All Contributions from Principal Components") +
+    geom_text(label = "Retain 75% Cumulative Variance", 
+              x = 12, y = 10, 
+              color = "steelblue") +
+    geom_curve(xend = 11, x = 12, y = 9.5, yend = 3.7,
+               arrow = arrow(length = unit(0.2, "cm")), curvature = .2)
     
+
 #Retain Determined Percentage of Data (75%)
 get_eig(Travel_PCA)
 Reduced_Dimensional_Data <- Travel_PCA$x[,1:11]
 
-fviz_pca_var(Travel_PCA,  col.var = "contrib",
+fviz_pca_var(Travel_PCA,  col.var = "cos2",
              gradient.cols = c("red", "darkgreen"),
              repel=TRUE,
-             title = "Variables - PCA Full Dataset") 
+             title = "Variables - PCA") 
 
 
 #------------------------
@@ -149,6 +160,7 @@ set.seed(2023)
 fviz_nbclust(Reduced_Dimensional_Data, kmeans, k.max=5, nstart=30, method="gap_stat", nboot=20)
 
 #Verify Using NbClust for K-means --> Showing 3 as the best number of clusters
+set.seed(123)
 NbClust(Reduced_Dimensional_Data, distance = "euclidean", min.nc = 2, 
                          max.nc = 5, method = "kmeans")
 
@@ -177,7 +189,10 @@ plot_ly(as.data.frame(Reduced_Dimensional_Data),
 
 #Visualize the silhouettes for full and reduced dataset
 sile_full = silhouette(K_Means_Model$cluster, dist(Reduced_Dimensional_Data))
-fviz_silhouette(sile_full)
+fviz_silhouette(sile_full) +
+    scale_fill_manual("Cluster", values = c("darkred", "orange", "grey")) +
+    scale_color_manual("Cluster", values = c("darkred", "orange", "grey"))
+
 
 #------------------------------------------------------------------
 #---Exploratory Data Analysis/Pattern Discussion/Recommendations---
@@ -199,7 +214,7 @@ summary_stats <- Travel_with_Cluster_Labels %>%
     summarise(across(where(is.numeric), 
                      list( median = median)))
 
-
+summary_stats
 #Retrieve Statistics Relating to How Groups Rated Certain Attractions/Locations
 Highest_Median_Rating <- c()
 Target_Group <- c()
@@ -215,8 +230,6 @@ for (i in 2:ncol(summary_stats)) {
         }
     }
 }
-
-
 
 #-------------------------------
 #Using our `Target_Campaign_Guide` sorted by our Target Groups and Their High
