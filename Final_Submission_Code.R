@@ -128,7 +128,7 @@ fviz_contrib(Travel_PCA, choice = "var", axes = 3)
 
 #Visualize explained variances per component
 fviz_eig(Travel_PCA, addlabels=TRUE, ncp = 24)+
-    labs(x = "Dimensions (Pricipal Components)",
+    labs(x = "Dimensions (Principal Components)",
          y = "Percentage of Explained Variances",
          title = "Scree-Plot",
          subtitle = "All Contributions from Principal Components") +
