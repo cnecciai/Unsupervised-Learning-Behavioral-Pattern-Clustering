@@ -115,11 +115,15 @@ corrplot(pca_full_var$contrib, is.corr = F, tl.col = "black")
 
 
 #Weak Variable Contributions to Principal Components
-fviz_contrib(Travel_PCA, choice = "var", axes = 1) # Contributions of variables to PC1
 
-fviz_contrib(Travel_PCA, choice = "var", axes = 2) # Contributions of variables to PC2
+# Contributions of variables to PC1
+fviz_contrib(Travel_PCA, choice = "var", axes = 1) 
 
-fviz_contrib(Travel_PCA, choice = "var", axes = 3) # Contributions of variables to PC3
+# Contributions of variables to PC2
+fviz_contrib(Travel_PCA, choice = "var", axes = 2) 
+
+# Contributions of variables to PC3
+fviz_contrib(Travel_PCA, choice = "var", axes = 3) 
 
 
 #Visualize explained variances per component
@@ -207,8 +211,11 @@ fviz_silhouette(sile_full) +
 #marketing campaign.
 #-------------------------------
 
+Travel_PCA$x
+
 Travel_with_Cluster_Labels <- cbind(Target_Group = factor(K_Means_Model$cluster), Travel_Data_Zero_Impute)
 
+Travel_with_Cluster_Labels
 summary_stats <- Travel_with_Cluster_Labels %>%
     group_by(Target_Group) %>%
     summarise(across(where(is.numeric), 
