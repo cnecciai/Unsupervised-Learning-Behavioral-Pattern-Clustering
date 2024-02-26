@@ -211,17 +211,19 @@ fviz_silhouette(sile_full) +
 #marketing campaign.
 #-------------------------------
 
-Travel_PCA$x
-
 Travel_with_Cluster_Labels <- cbind(Target_Group = factor(K_Means_Model$cluster), Travel_Data_Zero_Impute)
 
+#Original Dataset with Cluster Labels
 Travel_with_Cluster_Labels
+
 summary_stats <- Travel_with_Cluster_Labels %>%
     group_by(Target_Group) %>%
     summarise(across(where(is.numeric), 
                      list( median = median)))
 
+#Summary Statistics - Each Group and Corresponding Median Rating Per Variable 
 summary_stats
+
 #Retrieve Statistics Relating to How Groups Rated Certain Attractions/Locations
 Highest_Median_Rating <- c()
 Target_Group <- c()
